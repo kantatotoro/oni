@@ -2,50 +2,60 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>満点ボード</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>学習記録ボード</title>
 <style>
   body {
-    background: #000;
-    color: #fff;
     font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", sans-serif;
+    background-color: #000;
+    color: #fff;
     margin: 0;
     padding: 0;
     text-align: center;
   }
 
   #average {
-    font-size: 18em; /* 今の3倍くらい */
+    font-size: 10em;
     font-weight: bold;
-    margin: 20px 0;
-    background: linear-gradient(90deg, #ff9a00, #ff6a00, #ff3d00);
+    background: linear-gradient(90deg, #ff9500, #ff5e00);
     -webkit-background-clip: text;
-    color: transparent;
-    text-shadow: 0 0 20px rgba(255,140,0,0.5);
+    -webkit-text-fill-color: transparent;
+    margin: 40px 0 20px;
+    text-shadow: 0 0 20px rgba(255,100,0,0.5);
   }
 
   #input-area {
-    margin: 30px 0;
+    margin: 20px auto;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
   }
 
   input, button {
-    font-size: 1em;
-    padding: 12px 16px;
-    margin: 8px;
+    font-size: 1.1em;
+    padding: 10px 14px;
     border-radius: 10px;
     border: none;
     outline: none;
   }
 
   input {
-    width: 180px;
+    background: #111;
+    color: #fff;
+    border: 1px solid #333;
+  }
+
+  input:focus {
+    border-color: #ff9500;
+    box-shadow: 0 0 8px rgba(255,149,0,0.5);
   }
 
   button {
-    background: linear-gradient(135deg, #ff6a00, #ff9a00);
+    background: linear-gradient(90deg, #ff9500, #ff5e00);
     color: white;
     cursor: pointer;
-    transition: 0.3s;
+    transition: 0.2s;
   }
 
   button:hover {
@@ -55,51 +65,34 @@
 
   #scores {
     margin-top: 30px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 20px;
+    padding: 0 20px 100px;
   }
 
   .score-entry {
-    background: linear-gradient(135deg, #ff6a00, #ff9a00);
-    padding: 25px 40px;
-    border-radius: 20px;
-    box-shadow: 0 4px 20px rgba(255,105,0,0.5);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 70%;
-  }
-
-  .name {
-    font-size: 4em;
-    font-weight: bold;
-    margin-bottom: 10px;
-  }
-
-  .score {
+    background: #111;
+    color: #fff;
+    padding: 25px;
+    margin: 12px auto;
+    border-radius: 14px;
+    max-width: 600px;
+    box-shadow: 0 0 15px rgba(255, 94, 0, 0.3);
     font-size: 2em;
     font-weight: bold;
   }
 
   .delete-btn {
-    margin-top: 15px;
     background: #ff3b30;
-    border-radius: 8px;
-    padding: 6px 12px;
-    font-size: 1em;
-    cursor: pointer;
     border: none;
-    color: #fff;
+    border-radius: 8px;
+    padding: 6px 10px;
+    color: white;
+    font-size: 0.8em;
+    cursor: pointer;
+    margin-left: 10px;
   }
 
   #resetArea {
-    margin: 40px 0;
-  }
-
-  #adminPass {
-    width: 180px;
+    margin: 40px auto;
   }
 </style>
 </head>
@@ -108,8 +101,8 @@
 <div id="average">--.-</div>
 
 <div id="input-area">
-  <input type="text" id="nameInput" placeholder="名前を入力">
-  <input type="number" id="scoreInput" placeholder="得点 (0〜47)" min="0" max="47">
+  <input type="text" id="nameInput" placeholder="名前を入力" required>
+  <input type="number" id="scoreInput" placeholder="得点 (0〜47)" min="0" max="47" required>
   <button id="submitBtn">送信</button>
 </div>
 
@@ -147,7 +140,7 @@
   const resetBtn = document.getElementById("resetBtn");
   const adminPass = document.getElementById("adminPass");
 
-  // データ送信
+  // 送信
   submitBtn.addEventListener("click", () => {
     const name = nameInput.value.trim();
     const score = Number(scoreInput.value);
@@ -160,7 +153,7 @@
     scoreInput.value = "";
   });
 
-  // データ取得
+  // リアルタイム更新
   onValue(scoreRef, (snapshot) => {
     const data = snapshot.val();
     scoresDiv.innerHTML = "";
@@ -169,34 +162,23 @@
 
     if (data) {
       Object.entries(data).forEach(([key, val]) => {
-        if(val.score !== 47) return; // 満点以外非表示
-
-        const div = document.createElement("div");
-        div.className = "score-entry";
-
-        const nameSpan = document.createElement("span");
-        nameSpan.className = "name";
-        nameSpan.textContent = val.name;
-
-        const scoreSpan = document.createElement("span");
-        scoreSpan.className = "score";
-        scoreSpan.textContent = `${val.score}点`;
-
-        const delBtn = document.createElement("button");
-        delBtn.textContent = "削除";
-        delBtn.className = "delete-btn";
-        delBtn.onclick = () => remove(ref(db, "scores/" + key));
-
-        div.appendChild(nameSpan);
-        div.appendChild(scoreSpan);
-        div.appendChild(delBtn);
-
-        scoresDiv.appendChild(div);
-
         total += val.score;
         count++;
-      });
 
+        // 満点者のみ表示
+        if (val.score === 47) {
+          const div = document.createElement("div");
+          div.className = "score-entry";
+          div.textContent = `${val.name}（${val.score}点）`;
+
+          const delBtn = document.createElement("button");
+          delBtn.textContent = "削除";
+          delBtn.className = "delete-btn";
+          delBtn.onclick = () => remove(ref(db, "scores/" + key));
+          div.appendChild(delBtn);
+          scoresDiv.appendChild(div);
+        }
+      });
       const avg = count > 0 ? (total / count).toFixed(1) : "--.-";
       averageDiv.textContent = avg;
     } else {
@@ -204,10 +186,13 @@
     }
   });
 
-  // リセット機能
+  // 全削除
   resetBtn.addEventListener("click", () => {
-    if (adminPass.value === "1234") {
-      if(confirm("全データを削除しますか？")) remove(scoreRef);
+    const pass = adminPass.value;
+    if (pass === "1234") {
+      if (confirm("全データを削除しますか？")) {
+        remove(scoreRef);
+      }
     } else {
       alert("パスワードが違います。");
     }
